@@ -132,17 +132,17 @@ spec:
               value: {{ .Values.registry.manager_type | quote }}
           ports:
            - containerPort: 8081
-          {{ if eq .Values.healthCheck "true" }}
-          readinessProbe:
-            httpGet:
-              path: /health
-              port: 8081
-            initialDelaySeconds: {{ .Values.initialdelay }}
-            periodSeconds: {{ .Values.interval }}
-            timeoutSeconds: {{ .Values.timeout }}
-            successThreshold: 2
-            failureThreshold: {{ .Values.retries }}
-          {{ end }}
+          # {{ if eq .Values.healthCheck "true" }}
+          # readinessProbe:
+          #   httpGet:
+          #     path: /health
+          #     port: 8081
+          #   initialDelaySeconds: {{ .Values.initialdelay }}
+          #   periodSeconds: {{ .Values.interval }}
+          #   timeoutSeconds: {{ .Values.timeout }}
+          #   successThreshold: 2
+          #   failureThreshold: {{ .Values.retries }}
+          # {{ end }}
       volumes:
         - name: schema
           # configMap:
