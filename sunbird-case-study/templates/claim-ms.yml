@@ -1,0 +1,72 @@
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: {{ .Release.namespace | quote }}
+  name: {{ .Values.claim_ms.servicename | quote }}
+spec:
+  selector:
+    app: {{ .Values.claim_ms.label.app | quote }}
+  ports:
+    - name: http
+      port: 8082
+      targetPort: 8082
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: {{ .Release.namespace | quote }}
+  name: {{ .Values.claim_ms.name | quote }}
+  labels:
+    app: {{ .Values.claim_ms.label.app | quote }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ .Values.claim_ms.label.app | quote }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.claim_ms.label.app | quote }}
+    spec:
+      containers:
+        - name: {{ .Values.claim_ms.container.name | quote }}
+          image: dockerhub/sunbird-rc-claim-ms:latest
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "500m"
+            limits:
+              memory: "1024Mi"
+              cpu: "1000m"
+          env:
+            - name: connectionInfo_uri
+              value: jdbc:postgresql://{{ .Values.db.servicename }}:5432/registry
+            - name: connectionInfo_username
+              value: {{ .Values.db.postgres_user | quote }}
+            - name: connectionInfo_password
+              value: {{ .Values.db.postgres_password | quote }}
+            - name: sunbirdrc_url
+              value: http://{{ .Values.registry.servicename }}:8081
+          ports:
+            - name: http
+              containerPort: 8082
+          {{ if eq .Values.healthCheck "true" }}
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8082
+            initialDelaySeconds: {{ .Values.initialdelay }}
+            periodSeconds: {{ .Values.interval }}
+            timeoutSeconds: {{ .Values.timeout }}
+            failureThreshold: {{ .Values.retries }}
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8082
+            initialDelaySeconds: {{ .Values.initialdelay }}
+            periodSeconds: {{ .Values.interval }}
+            timeoutSeconds: {{ .Values.timeout }}
+            failureThreshold: {{ .Values.retries }}
+          {{ end }}
+          

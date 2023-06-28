@@ -1,0 +1,151 @@
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: {{ .Release.namespace | quote }}
+  name: {{ .Values.registry.servicename | quote }}
+spec:
+  selector:
+    app: {{ .Values.registry.label.app | quote }}
+  ports:
+    - name: http
+      port: 8081
+      targetPort: 8081
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: {{ .Release.namespace | quote }}
+  name: {{ .Values.registry.name | quote }}
+  labels:
+     app: {{ .Values.registry.label.app | quote }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ .Values.registry.label.app | quote }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.registry.label.app | quote }}
+    spec:
+      containers:
+        - name: {{ .Values.registry.container.name | quote }}
+          image: dockerhub/sunbird-rc-core:{{ .Values.release_version }}
+          volumeMounts:
+            - name: schema
+              mountPath: /home/sunbirdrc/config/public/_schemas
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "500m"
+            limits:
+              memory: "1024Mi"
+              cpu: "1000m"
+          env:
+            - name: connectionInfo_uri
+              value: "jdbc:postgresql://{{ .Values.db.servicename }}:5432/registry"
+            - name: connectionInfo_username
+              value: {{ .Values.db.postgres_user | quote }}
+            - name: connectionInfo_password
+              value: {{ .Values.db.postgres_password | quote }}
+            - name: event_enabled
+              value: {{ .Values.registry.event_enabled | quote }}
+            - name: event_topic
+              value: events
+            - name: event_providerName
+              value: dev.sunbirdrc.registry.service.impl.KafkaEventService
+            - name: elastic_search_connection_url
+              value: "{{ .Values.elasticsearch.servicename }}:9200"
+            - name: elastic_search_auth_enabled
+              value: {{ .Values.registry.elastic_security_enabled | quote }}
+            - name: elastic_search_username
+              value: {{ .Values.registry.elastic_search_username | quote }}
+            - name: elastic_search_password
+              valueFrom:
+                secretKeyRef:
+                  name: secrets
+                  key: ELASTIC_SEARCH_PASSWORD
+            - name: search_providerName
+              value: "dev.sunbirdrc.registry.service.ElasticSearchService"
+            - name: sunbird_sso_realm
+              value: {{ .Values.registry.keycloak_realm | quote }}
+            - name: sunbird_sso_url
+              value: "http://{{ .Values.keycloak.servicename }}:8080/auth"
+            - name: sunbird_sso_admin_client_id
+              value: {{ .Values.registry.keycloak_admin_client_id | quote }}
+            - name: sunbird_sso_client_id
+              value: {{ .Values.registry.keycloak_client_id | quote }}
+            - name: sunbird_sso_admin_client_secret
+              valueFrom:
+                secretKeyRef:
+                  name: secrets
+                  key: KEYCLOAK_SECRET
+            - name: claims_url
+              value: "http://{{ .Values.claim_ms.servicename }}:8082"
+            - name: sign_url
+              value: "http://{{ .Values.certificate_signer.servicename }}:8079/sign"
+            - name: verify_url
+              value: "http://{{ .Values.certificate_signer.servicename }}:8079/verify"
+            - name: sign_health_check_url
+              value: "http://{{ .Values.certificate_signer.servicename }}:8079/health"
+            - name: signature_enabled
+              value: {{ .Values.registry.signature_enabled | quote }}
+            - name: pdf_url
+              value: "http://{{ .Values.certificate_api.servicename }}:8078/api/v1/certificatePDF"
+            - name: certificate_health_check_url
+              value: "http://{{ .Values.certificate_api.servicename }}:8078/health"
+            - name: template_base_url
+              value: "http://{{ .Values.registry.servicename }}:8081/api/v1/templates/"
+            - name: sunbird_keycloak_user_set_password
+              value: {{ .Values.registry.sunbird_keycloak_user_set_password | quote }}
+            - name: filestorage_connection_url
+              value: "http://{{ .Values.file_storage.servicename }}:9000"
+            - name: filestorage_access_key
+              value: {{ .Values.file_storage.minio_root_user | quote }}
+            - name: filestorage_secret_key
+              value: {{ .Values.file_storage.minio_root_password | quote }}
+            - name: filestorage_bucket_key
+              value: issuance
+            - name: registry_base_apis_enable
+              value: "false"
+            - name: sunbird_keycloak_user_password
+              value: "abcd@123"
+            - name: logging.level.root
+              value: INFO
+            - name: enable_external_templates
+              value: {{ .Values.registry.enable_external_templates | quote }}
+            - name: async_enabled
+              value: {{ .Values.registry.async_enabled | quote }}
+            - name: authentication_enabled
+              value: {{ .Values.registry.authentication_enabled | quote }}
+            - name: kafka_bootstrap_address
+              value: "{{ .Values.kafka.servicename }}:9092"
+            - name: webhook_enabled
+              value: {{ .Values.registry.webhook_enabled | quote }}
+            - name: webhook_url
+              value: "http://localhost:5001/api/v1/callback"
+            - name: redis_host
+              value: redis
+            - name: redis_port
+              value: "6379"
+            - name: manager_type
+              value: {{ .Values.registry.manager_type | quote }}
+          ports:
+           - containerPort: 8081
+          {{ if eq .Values.healthCheck "true" }}
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8081
+            initialDelaySeconds: {{ .Values.initialdelay }}
+            periodSeconds: {{ .Values.interval }}
+            timeoutSeconds: {{ .Values.timeout }}
+            successThreshold: 2
+            failureThreshold: {{ .Values.retries }}
+          {{ end }}
+      volumes:
+        - name: schema
+          # configMap:
+          #   name: schemas
+          persistentVolumeClaim:
+            claimName: {{ .Values.pvc.name | quote }}

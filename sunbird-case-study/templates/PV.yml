@@ -1,0 +1,13 @@
+kind: PersistentVolume
+apiVersion: v1
+metadata:
+ name: {{ .Values.pv.name | quote }}
+spec:
+ storageClassName: {{ .Values.pv.storageClassName | quote }}
+ capacity: 
+  storage: {{ .Values.pv.storage | quote }}
+ accessModes: 
+  - {{ .Values.pv.accessModes | quote }}
+ persistentVolumeReclaimPolicy: Recycle
+ hostPath:
+  path: {{ .Values.pv.path | quote }}

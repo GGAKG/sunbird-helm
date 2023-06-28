@@ -1,0 +1,65 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  namespace: {{ .Release.namespace | quote }}
+  name: {{ .Values.db.name | quote }}
+  labels:
+     app: {{ .Values.db.label.app | quote }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  serviceName: {{ .Values.db.servicename | quote }}
+  selector:
+    matchLabels:
+      app: {{ .Values.db.label.app | quote }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.db.label.app | quote }}
+    spec:
+      containers:
+        - name: {{ .Values.db.container.name | quote }}
+          image: postgres
+          volumeMounts:
+            - name: db-data
+              mountPath: /var/lib/postgresql/data
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_DB
+              value: {{ .Values.db.postgres_db | quote }}
+            - name: POSTGRES_USER
+              value: {{ .Values.db.postgres_user | quote }}
+            - name: POSTGRES_PASSWORD
+              value: {{ .Values.db.postgres_password | quote }}
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          {{ if eq .Values.healthCheck "true" }}
+          readinessProbe:
+            exec:
+              command:
+                - pg_isready
+                - "-U"
+                - postgres
+            initialDelaySeconds: {{ .Values.initialdelay }}
+            periodSeconds: {{ .Values.interval }}
+            timeoutSeconds: {{ .Values.timeout }}
+            successThreshold: 2
+            failureThreshold: {{ .Values.retries }}
+          {{ end }}
+      volumes:
+        - name: db-data
+          persistentVolumeClaim:
+            claimName: {{ .Values.pvc.name | quote }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: {{ .Release.namespace | quote }}
+  name: {{ .Values.db.servicename | quote }}
+spec:
+  selector:
+    app: {{ .Values.db.label.app | quote }}
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: 5432

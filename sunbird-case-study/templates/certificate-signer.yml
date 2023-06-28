@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: {{ .Release.namespace | quote }}
+  name: {{ .Values.certificate_signer.name | quote }}
+  labels:
+    app: {{ .Values.certificate_signer.label.app | quote }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ .Values.certificate_signer.label.app | quote }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.certificate_signer.label.app | quote }}
+    spec:
+      containers:
+        - name: {{ .Values.certificate_signer.container.name | quote }}
+          image: dockerhub/sunbird-rc-certificate-signer:{{ .Values.release_version }}
+          ports:
+            - containerPort: 8079
+          volumeMounts:
+            - name: signer-volume
+              mountPath: /etc/signer
+          env:
+            - name: PORT
+              value: "8079"
+          {{ if eq .Values.healthCheck "true" }}
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8079
+            initialDelaySeconds: {{ .Values.initialdelay }}
+            periodSeconds: {{ .Values.interval }}
+            timeoutSeconds: {{ .Values.timeout }}
+            failureThreshold: {{ .Values.retries }}
+          {{ end }}
+      volumes:
+        - name: signer-volume
+          configMap:
+           name: imports          
+---
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: {{ .Release.namespace | quote }}
+  name: {{ .Values.certificate_signer.servicename | quote }}
+spec:
+  selector:
+    app: {{ .Values.certificate_signer.label.app | quote }}
+  ports:
+    - name: http
+      port: 8079
+      targetPort: 8079
+  type: ClusterIP

@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: {{ .Release.namespace | quote }}
+  name: {{ .Values.notification_ms.name | quote }}
+  labels:
+    app: {{ .Values.notification_ms.label.app | quote }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ .Values.notification_ms.label.app | quote }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.notification_ms.label.app | quote }}
+    spec:
+      containers:
+        - name: {{ .Values.notification_ms.container.name | quote }}
+          image: dockerhub/sunbird-rc-notification-service:{{ .Values.release_version }}
+          ports:
+            - containerPort: 8765
+          {{ if eq .Values.healthCheck "true" }}
+          readinessProbe:
+            httpGet:
+              path: /notification-service/v1/health
+              port: 8765
+            initialDelaySeconds: {{ .Values.initialdelay }}
+            periodSeconds: {{ .Values.interval }}
+            timeoutSeconds: {{ .Values.timeout }}
+            failureThreshold: {{ .Values.retries }}
+          {{ end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: {{ .Release.namespace | quote }}
+  name: {{ .Values.notification_ms.servicename | quote }}
+spec:
+  selector:
+    app: {{ .Values.notification_ms.label.app | quote }}
+  ports:
+    - name: http
+      protocol: TCP
+      port: 8765
+      targetPort: 8765
+  type: ClusterIP

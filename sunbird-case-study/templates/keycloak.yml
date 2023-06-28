@@ -1,0 +1,102 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: {{ .Release.namespace | quote }}
+  name: {{ .Values.keycloak.name | quote }}
+  labels:
+    app: {{ .Values.keycloak.label.app | quote }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ .Values.keycloak.label.app | quote }}
+  template:
+   metadata:
+      labels:
+        app: {{ .Values.keycloak.label.app | quote }}
+   spec:
+    containers:
+    - name: {{ .Values.keycloak.container.name | quote }}
+      image: dockerhub/sunbird-rc-keycloak:latest
+      resources:
+        requests:
+          memory: "512Mi"
+          cpu: "500m"
+        limits:
+          memory: "1024Mi"
+          cpu: "1000m"
+      volumeMounts:
+        - name: keycloak-imports
+          mountPath: /opt/jboss/keycloak/imports
+      env:
+        - name: KEYCLOAK_LOGO
+          value: "https://svgshare.com/i/hCs.svg"
+        - name: DB_VENDOR
+          value: {{ .Values.keycloak.db_vendor | quote }}
+        - name: DB_ADDR
+          value: {{ .Values.db.servicename | quote }}
+        - name: DB_PORT
+          value: "5432"
+        - name: DB_DATABASE
+          value: {{ .Values.db.postgres_db | quote }}
+        - name: DB_USER
+          value: {{ .Values.db.postgres_user | quote }}
+        - name: DB_PASSWORD
+          value: {{ .Values.db.postgres_password | quote }}
+        - name: KEYCLOAK_USER
+          value: {{ .Values.keycloak.keycloak_admin_user | quote }}
+        - name: KEYCLOAK_PASSWORD
+          value: {{ .Values.keycloak.keycloak_admin_password | quote }}
+        - name: KEYCLOAK_IMPORT
+          value: "/opt/jboss/keycloak/imports/realm-export.json"
+        - name: PROXY_ADDRESS_FORWARDING
+          value: {{ .Values.keycloak.proxy_address_forwarding | quote }}
+      ports:
+        - containerPort: 8080
+        - containerPort: 9990
+      {{ if eq .Values.healthCheck "true" }}
+      livenessProbe:
+        httpGet:
+          path: /
+          port: 8080
+        initialDelaySeconds: {{ .Values.initialdelay }}
+        periodSeconds: {{ .Values.interval }}
+        timeoutSeconds: {{ .Values.timeout }}
+        failureThreshold: {{ .Values.retries }}
+      readinessProbe:
+        httpGet:
+          path: /
+          port: 8080
+        initialDelaySeconds: {{ .Values.initialdelay }}
+        periodSeconds: {{ .Values.interval }}
+        timeoutSeconds: {{ .Values.timeout }}
+        failureThreshold: {{ .Values.retries }}
+      {{ end }}
+    volumes:
+        - name: keycloak-imports
+          configMap:
+            name: imports
+            # items:
+            #  - key: realm-export.json
+            #    path: realm-export.json
+          # hostPath:
+          #  path: /home/docker/sn3/imports
+---
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: {{ .Release.namespace | quote }}
+  name: {{ .Values.keycloak.servicename | quote }}
+spec:
+  type: ClusterIP
+  selector:
+    app: {{ .Values.keycloak.label.app | quote }}
+  ports:
+  - name: keycloak
+    port: 8080
+    targetPort: 8080
+  - name: http
+    port: 9990
+    targetPort: 9990
+
+  

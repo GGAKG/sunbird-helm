@@ -1,0 +1,57 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: {{ .Release.namespace | quote }}
+  name: {{ .Values.public_key_service.name | quote }}
+  labels:
+      app: {{ .Values.public_key_service.label.app | quote }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ .Values.public_key_service.label.app | quote }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.public_key_service.label.app | quote }}
+    spec:
+      containers:
+      - name: {{ .Values.public_key_service.container.name | quote }}
+        image: dockerhub/sunbird-rc-public-key-service
+        ports:
+        - containerPort: 3300
+        env:
+        - name: CONFIG_BASE_PATH
+          value: /etc/keys
+        volumeMounts:
+        - name: key-volume
+          mountPath: /etc/keys
+        {{ if eq .Values.healthCheck "true" }}
+        readinessProbe:
+          httpGet:
+            path: /public-key-service/api/v1/health
+            port: 3300
+          initialDelaySeconds: {{ .Values.initialdelay }}
+          periodSeconds: {{ .Values.interval }}
+          timeoutSeconds: {{ .Values.timeout }}
+          successThreshold: 2
+          failureThreshold: {{ .Values.retries }}
+        {{ end }}
+      volumes:
+      - name: key-volume
+        configMap:
+           name: imports 
+---
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: {{ .Release.namespace | quote }}
+  name:  {{ .Values.public_key_service.service.name | quote }}
+spec:
+  selector:
+    app: {{ .Values.public_key_service.label.app | quote }}
+  ports:
+  - name: http
+    port: 3300
+    targetPort: 3300
+  type: ClusterIP

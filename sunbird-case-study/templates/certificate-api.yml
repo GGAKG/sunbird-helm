@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: {{ .Release.namespace | quote }}
+  name: {{ .Values.certificate_api.name | quote }}
+  labels:
+     app: {{ .Values.certificate_api.label.app | quote }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ .Values.certificate_api.label.app | quote }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.certificate_api.label.app | quote }}
+    spec:
+      containers:
+      - name: {{ .Values.certificate_api.container.name | quote }}
+        image: dockerhub/sunbird-rc-certificate-api:{{ .Values.release_version }}
+        ports:
+        - containerPort: 8078
+        env:
+        - name: PORT
+          value: "8078"
+        {{ if eq .Values.healthCheck "true" }}
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8078
+          initialDelaySeconds: {{ .Values.initialdelay }}
+          periodSeconds: {{ .Values.interval }}
+          timeoutSeconds: {{ .Values.timeout }}
+          failureThreshold: {{ .Values.retries }}
+        {{ end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: {{ .Release.namespace | quote }}
+  name: {{ .Values.certificate_api.servicename | quote }}
+spec:
+  selector:
+    app: {{ .Values.certificate_api.label.app | quote }}
+  ports:
+  - name: http
+    port: 8078
+    targetPort: 8078
+  type: ClusterIP

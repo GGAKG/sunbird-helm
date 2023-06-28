@@ -1,0 +1,145 @@
+# Default values for sunbird-case-study.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+replicaCount: 1
+release_version: v0.0.13
+initialdelay: 300
+interval: 30
+timeout: 300
+retries: 10
+healthCheck: "true"
+pv:
+ name: myvolume3
+ storageClassName: manual
+ storage: 15Gi
+ accessModes: ReadWriteMany
+ path: /home/docker/PV
+pvc: 
+ name: myvolumeclaim3
+ storage: 10Gi
+zookeeper:
+ name: zookeeper
+ servicename: zookeeper
+ container:
+  name: zookeeper
+ label:
+  app: zookeeper
+redis:
+ name: redis
+public_key_service:
+ name: public-key-service
+ service:
+  name: public-key-service
+ container:
+  name: public-key-service
+ label:
+  app: public-key-service
+notification_ms:
+ name: notification-ms
+ servicename: notification-ms
+ container:
+  name: notification-ms
+ label:
+  app: notification-ms
+nginx:
+ name: nginx
+ servicename: nginx
+ container:
+  name: nginx
+ label:
+  app: nginx
+ port: 32240
+keycloak:
+ name: keycloak
+ servicename: keycloak
+ container:
+  name: keycloak
+ label:
+  app: keycloak
+ db_vendor: postgres
+ keycloak_admin_user: admin
+ keycloak_admin_password: admin
+ proxy_address_forwarding: true
+kafka:
+ name: kafka
+ servicename: kafka2
+ container:
+  name: kafka
+ label:
+  app: kafka
+file_storage:
+ name: file-storage
+ servicename: file-storage
+ container:
+  name: file-storage
+ label:
+  app: file-storage
+ minio_root_user: admin
+ minio_root_password: 12345678
+context_proxy_service:
+ name: context-proxy-service
+ servicename: context-proxy-service
+ container:
+  name: context-proxy-service
+ label:
+  app: context-proxy-service
+claim_ms:
+ name: claim-ms
+ servicename: claim-ms
+ container:
+  name: claim-ms
+ label:
+  app: claim-ms
+certificate_signer:
+ name: certificate-signer
+ servicename: certificate-signer
+ container:
+  name: certificate-signer
+ label:
+  app: certificate-signer
+certificate_api:
+ name: certificate-api
+ servicename: certificate-api
+ container:
+  name: certificate-api
+ label:
+  app: certificate-api
+elasticsearch:
+ name: elasticsearch
+ servicename: es
+ container:
+  name: elasticsearch
+ label:
+  app: elasticsearch
+ elastic_security_enabled: false
+db:
+ name: db
+ servicename: db
+ container:
+  name: postgres
+ label:
+  app: db
+ postgres_db: registry
+ postgres_user: postgres
+ postgres_password: postgres
+registry:
+ name: registry
+ servicename: registry
+ container:
+  name: registry
+ label:
+  app: registry
+ event_enabled: false
+ elastic_search_username: elastic
+ elastic_security_enabled: false
+ keycloak_realm: sunbird-rc
+ keycloak_admin_client_id: admin-api
+ keycloak_client_id: registry-frontend
+ signature_enabled: true
+ sunbird_keycloak_user_set_password: true
+ enable_external_templates: true
+ async_enabled: false
+ authentication_enabled: true
+ webhook_enabled: false
+ manager_type: DefinitionsManager

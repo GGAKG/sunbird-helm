@@ -1,0 +1,57 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: {{ .Release.namespace | quote }}
+  name: {{ .Values.nginx.name | quote }}
+  labels:
+    app: {{ .Values.nginx.label.app | quote }}
+spec:
+ replicas: {{ .Values.replicaCount }}
+ selector:
+  matchLabels:
+     app: {{ .Values.nginx.label.app | quote }}
+ template:
+    metadata:
+      labels:
+        app: {{ .Values.nginx.label.app | quote }}
+    spec:
+      containers:
+      - name: {{ .Values.nginx.container.name | quote }}
+        image: dockerhub/sunbird-rc-nginx
+        ports:
+        - containerPort: 80
+        {{ if eq .Values.healthCheck "true" }}
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: {{ .Values.initialdelay }}
+          periodSeconds: {{ .Values.interval }}
+          timeoutSeconds: {{ .Values.timeout }}
+          successThreshold: 1
+          failureThreshold: {{ .Values.retries }}
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: {{ .Values.initialdelay }}
+          periodSeconds: {{ .Values.interval }}
+          timeoutSeconds: {{ .Values.timeout }}
+          successThreshold: 1
+          failureThreshold: {{ .Values.retries }}
+        {{ end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: {{ .Release.namespace | quote }}
+  name: {{ .Values.nginx.servicename | quote }}
+spec:
+  selector:
+    app: {{ .Values.nginx.label.app | quote }}
+  ports:
+    - name: http
+      port: 80
+      targetPort: 80
+      nodePort: {{ .Values.nginx.port }}
+  type: NodePort

@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: {{ .Release.namespace | quote }}
+  name: {{ .Values.context_proxy_service.name | quote }}
+  labels:
+    app: {{ .Values.context_proxy_service.label.app | quote }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ .Values.context_proxy_service.label.app | quote }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.context_proxy_service.label.app | quote }}
+    spec:
+      containers:
+      - name: {{ .Values.context_proxy_service.container.name | quote }}
+        image: dockerhub/sunbird-rc-context-proxy-service
+        ports:
+        - containerPort: 4400
+        {{ if eq .Values.healthCheck "true" }}
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 4400
+          initialDelaySeconds: {{ .Values.initialdelay }}
+          periodSeconds: {{ .Values.interval }}
+          timeoutSeconds: {{ .Values.timeout }}
+          failureThreshold: {{ .Values.retries }}
+        {{ end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: {{ .Release.namespace | quote }}
+  name: {{ .Values.context_proxy_service.servicename | quote }}
+spec:
+  selector:
+    app: {{ .Values.context_proxy_service.label.app | quote }}
+  ports:
+    - name: http
+      protocol: TCP
+      port: 4400
+      targetPort: 4400
+  type: ClusterIP

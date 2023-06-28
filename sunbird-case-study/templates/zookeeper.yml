@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: {{ .Release.namespace | quote }}
+  name: {{ .Values.zookeeper.name | quote }}
+  labels:
+    app: {{ .Values.zookeeper.label.app | quote }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ .Values.zookeeper.label.app | quote }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.zookeeper.label.app | quote }}
+    spec:
+      containers:
+        - name: {{ .Values.zookeeper.container.name | quote }}
+          image: confluentinc/cp-zookeeper:latest
+          ports:
+            - containerPort: 2181
+          env:
+            - name: ZOOKEEPER_CLIENT_PORT
+              value: "2181"
+            - name: ZOOKEEPER_TICK_TIME
+              value: "2000"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: {{ .Release.namespace | quote}}
+  name: {{ .Values.zookeeper.servicename | quote }}
+spec:
+  type: ClusterIP
+  selector:
+    app: {{ .Values.zookeeper.label.app | quote }}
+  ports:
+    - name: client
+      port: 2181
+      targetPort: 2181
