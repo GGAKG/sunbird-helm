@@ -4,9 +4,9 @@
 
 replicaCount: 1
 release_version: v0.0.13
-initialdelay: 300
+initialdelay: 60
 interval: 30
-timeout: 300
+timeout: 60
 retries: 10
 healthCheck: "true"
 pv:
